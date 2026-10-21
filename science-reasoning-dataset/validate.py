@@ -3,7 +3,9 @@
 
 Run before every training job. Exits non-zero on any ERROR.
 
-    python3 tools/validate.py --train seed/*.jsonl --eval eval/held_out.jsonl
+    python3 validate.py                 # every *.jsonl here; eval_*.jsonl is the eval split
+    python3 validate.py --strict        # warnings fail too
+    python3 validate.py --train sft_core.jsonl --eval eval_held_out.jsonl
 
 Checks that earn their place (each has caught a real class of defect):
 
@@ -329,10 +331,18 @@ def check_numerics(records: list[dict], label: str, rep: Report) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    root = Path(__file__).resolve().parent.parent
+    root = Path(__file__).resolve().parent
+    # Flat layout: every *.jsonl beside this script is training data, except the
+    # eval_* files. Splitting on the filename keeps a frozen eval set from being
+    # swept into training by a careless glob.
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--train", nargs="*", type=Path, default=sorted((root / "seed").glob("*.jsonl")))
-    ap.add_argument("--eval", nargs="*", type=Path, default=[root / "eval" / "held_out.jsonl"])
+    ap.add_argument(
+        "--train",
+        nargs="*",
+        type=Path,
+        default=sorted(p for p in root.glob("*.jsonl") if not p.name.startswith("eval_")),
+    )
+    ap.add_argument("--eval", nargs="*", type=Path, default=sorted(root.glob("eval_*.jsonl")))
     ap.add_argument("--schema", type=Path, default=root / "schema.json")
     ap.add_argument("--strict", action="store_true", help="treat warnings as errors")
     args = ap.parse_args(argv)

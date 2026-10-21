@@ -10,16 +10,23 @@ evaluation gate) and deliberately leaves the data unspecified. This directory is
 the data: the taxonomy, the record schema, the provenance rules, the grading
 protocol, and 34 worked records to annotate the rest against.
 
+One flat folder, no subdirectories:
+
 ```
-schema.json              record schema (JSON Schema draft-07)
-seed/sft_core.jsonl      14 SFT records, core reasoning skills
-seed/sft_calibration.jsonl  6 SFT records, calibration / appraisal / computation
-seed/dpo_pairs.jsonl      8 preference pairs
-eval/held_out.jsonl       6 frozen evaluation prompts (no gold completions)
-tools/validate.py         schema, duplicate, contamination and mixture checks
+README.md                  this file: the spec
+schema.json                record schema (JSON Schema draft-07)
+sft_core.jsonl             14 SFT records, core reasoning skills
+sft_calibration.jsonl       6 SFT records, calibration / appraisal / computation
+dpo_pairs.jsonl             8 preference pairs
+eval_held_out.jsonl         6 frozen evaluation prompts (no gold completions)
+validate.py                schema, duplicate, contamination and mixture checks
 ```
 
-Current state: `python3 tools/validate.py` → **PASS**, 0 errors, 0 warnings.
+The `eval_` filename prefix is the split boundary: `validate.py` treats every
+other `*.jsonl` here as training data and these as the frozen eval set, so a
+careless glob cannot sweep the eval prompts into training.
+
+Current state: `python3 validate.py --strict` → **PASS**, 0 errors, 0 warnings.
 
 ---
 
@@ -49,7 +56,7 @@ reusing the corpus elsewhere (§7).
 ## 2. Taxonomy and target mixture
 
 Ten categories. Shares are the **target for the full corpus**, not for the seed
-set — `tools/validate.py` reports drift and, below n = 500, treats it as
+set — `validate.py` reports drift and, below n = 500, treats it as
 expected rather than as a warning.
 
 | Share | Category | What it trains |
@@ -118,7 +125,7 @@ of the signal is.
 
 ## 4. Preference pairs: what makes a pair teach anything
 
-Eight pairs in `seed/dpo_pairs.jsonl`. Three rules, from guide §A3:
+Eight pairs in `dpo_pairs.jsonl`. Three rules, from guide §A3:
 
 **1. The rejected response must be one the model would actually produce.** DPO
 moves probability mass away from the rejected response; if the model assigns it
@@ -157,7 +164,7 @@ source material. The `reviewer_note` on each says so; keep that note attached.
 
 ## 5. Evaluation
 
-`eval/held_out.jsonl` is **frozen**. Six prompts, no gold completions — rubrics
+`eval_held_out.jsonl` is **frozen**. Six prompts, no gold completions — rubrics
 and ground-truth numbers only. Decontaminate the *training* set against it, never
 the reverse; `validate.py` enforces this at Jaccard ≥ 0.50 on 5-gram shingles of
 the user turns, stricter than the 0.70 it uses for within-split redundancy,
@@ -207,7 +214,7 @@ The seed set's job is to fix the annotation standard. To scale:
 3. **Keep the preference prompt distribution aligned with the SFT distribution**
    (guide §A3). A large shift between stages produces a reward signal the policy
    cannot act on.
-4. **Re-run `tools/validate.py --strict` before every job.** Deduplicate within
+4. **Re-run `validate.py --strict` before every job.** Deduplicate within
    the training set too: repeated examples silently reweight the mixture away
    from the table in §2, so the mixture you trained on is not the one you
    declared.
