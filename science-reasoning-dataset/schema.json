@@ -1,0 +1,123 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Science-reasoning training record",
+  "description": "One line of JSONL. SFT records carry `messages`; preference records carry `messages` plus `chosen` and `rejected`.",
+  "type": "object",
+  "required": ["id", "category", "skill", "difficulty", "messages", "rubric", "provenance"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^(sft|dpo|eval)-[a-z0-9-]+-[0-9]{4}$"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "quantitative-inference",
+        "statistical-reasoning",
+        "experimental-design",
+        "data-interpretation",
+        "derivation",
+        "false-premise-correction",
+        "calibration-and-abstention",
+        "evidence-appraisal",
+        "computation-workflow",
+        "constraint-retention"
+      ]
+    },
+    "skill": {
+      "type": "string",
+      "description": "The specific competence the record trains, finer-grained than category. Used for per-skill eval slicing."
+    },
+    "difficulty": {
+      "type": "string",
+      "enum": ["introductory", "intermediate", "advanced"]
+    },
+    "messages": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "required": ["role", "content"],
+        "additionalProperties": false,
+        "properties": {
+          "role": {"type": "string", "enum": ["system", "user", "assistant"]},
+          "content": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "chosen": {"type": "string", "minLength": 1},
+    "rejected": {"type": "string", "minLength": 1},
+    "rubric": {
+      "type": "object",
+      "required": ["must_contain", "must_not_contain"],
+      "additionalProperties": false,
+      "properties": {
+        "must_contain": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Checkable properties of a correct answer, written so a grader (human or model) can mark each one present/absent independently."
+        },
+        "must_not_contain": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Specific failure modes this record is designed to penalise."
+        },
+        "numeric_answers": {
+          "type": "array",
+          "description": "Ground-truth numbers with tolerance, for records where grading can be mechanical.",
+          "items": {
+            "type": "object",
+            "required": ["quantity", "value", "unit", "rel_tol"],
+            "additionalProperties": false,
+            "properties": {
+              "quantity": {"type": "string"},
+              "value": {"type": "number"},
+              "unit": {"type": "string"},
+              "rel_tol": {"type": "number", "exclusiveMinimum": 0}
+            }
+          }
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "required": ["source", "spec_version", "review_status"],
+      "additionalProperties": false,
+      "properties": {
+        "source": {
+          "type": "string",
+          "enum": ["human-written", "model-generated", "model-generated-human-edited", "public-dataset"]
+        },
+        "origin_detail": {
+          "type": "string",
+          "description": "Generating model + prompt id, or dataset name + split + licence. Required in practice for anything not human-written."
+        },
+        "spec_version": {"type": "string"},
+        "review_status": {
+          "type": "string",
+          "enum": ["unreviewed", "reviewed", "adjudicated"]
+        },
+        "reviewer_note": {"type": "string"}
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"id": {"pattern": "^dpo-"}}},
+      "then": {"required": ["chosen", "rejected"]}
+    },
+    {
+      "if": {
+        "properties": {
+          "provenance": {
+            "properties": {"source": {"enum": ["model-generated", "model-generated-human-edited", "public-dataset"]}}
+          }
+        }
+      },
+      "then": {
+        "properties": {"provenance": {"required": ["source", "spec_version", "review_status", "origin_detail"]}}
+      }
+    }
+  ]
+}
