@@ -38,7 +38,14 @@ design cannot answer the question asked of it; correcting a false premise that
 arrives with social pressure attached; and saying "I don't know, here is how to
 find out" instead of producing a plausible number.
 
-**Not target competences.** Factual recall, and citation. Those belong to
+**Not target competences.** Factual recall, citation, and *reasoning depth* —
+see `../science-rl-environment/`, which covers the quantitative axis with
+programmatic graders and an RL reward. The two are complements: rubric grading
+reaches the judgements that have no checkable answer, and the RL environment
+reaches the arithmetic that a rubric can only gesture at. Neither replaces the
+other.
+
+Factual recall and citation. Those belong to
 retrieval and to the deterministic verification layer (guide §B1, §B3, §B5). The
 architectural premise is that the model is the thing that *reasons, retrieves and
 computes*, not the thing that *knows* — so several records train the model to
